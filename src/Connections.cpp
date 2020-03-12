@@ -14,37 +14,13 @@ TCPConnection::TCPConnection(Container& container, QTcpSocket * tcpSocket)
 {
 }
 
-/*
-TCPConnection::TCPConnection(TCPConnection&& other)
-    : container_(other.container_),
-    tcpSocket_(std::move(other.tcpSocket_)),
-    ipStr_(std::move(other.ipStr_)),
-    connectionLoop_(std::move(other.connectionLoop_))
-{
-    loop_ = other.loop_.load();
-    other.loop_ = false;
-}
-*/
-
 const QString & TCPConnection::GetIP() const
 {
     return ipStr_;
 }
 
-
 TCPConnection::~TCPConnection()
 {
-    /*
-    if (loop_)
-    {
-        loop_ = false;
-        connectionLoop_.join();
-    }
-
-    if (!tcpSocket_)
-        return;
-    */
-
     loop_ = false;
     if (connectionLoop_.joinable())
         connectionLoop_.join();
@@ -62,7 +38,8 @@ void TCPConnection::LoopConnection()
     QString protocol{ "#M" };
 
     // TODO: implement
-    while(loop_)
+    while(loop_ &&
+        tcpSocket_->state() != QAbstractSocket::ConnectedState)
     { 
         if (!tcpSocket_->waitForReadyRead(500))
         {
@@ -70,18 +47,16 @@ void TCPConnection::LoopConnection()
             continue;
         }
 
+        // receive message
         QString msgBegin,
             message;
         int counter;
 
-        // receive message
-        do
-        {
-            in.startTransaction();
-            in >> msgBegin >> counter >> message;
+        in.startTransaction();
+        in >> msgBegin >> counter >> message;
 
-        } while (!in.commitTransaction());
-
+        if (!in.commitTransaction())
+            continue;
 
         // check if message starts properly and that the counter is not even
         if (msgBegin != protocol ||

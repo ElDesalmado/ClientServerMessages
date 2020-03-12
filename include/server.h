@@ -89,6 +89,8 @@ private:
 
 class Connections
 {
+    // TODO: remove connection if client have disconnected
+
     // this reference is used to append new ip names
     QListWidget& listConnections_;
 
