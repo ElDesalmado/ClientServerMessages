@@ -1,8 +1,8 @@
 Current stage: In developement.
 
-Version: 0.1.1
+Version: 0.1.2
 
-### Installation:
+### Intsalation:
 On Windows, using Powershell
 
 ```

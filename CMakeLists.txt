@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
-project(ClientServerMessages LANGUAGES CXX)
+project(ClientServerMessages VERSION 0.1.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
