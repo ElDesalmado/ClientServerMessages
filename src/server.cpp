@@ -186,6 +186,7 @@ ServerMsgLoop::~ServerMsgLoop()
 {
     if (!end_)
         Stop();
-    msgLoop_.join();
+    if (msgLoop_.joinable())
+        msgLoop_.join();
 }
  

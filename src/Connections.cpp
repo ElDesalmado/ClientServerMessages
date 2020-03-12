@@ -46,7 +46,8 @@ TCPConnection::~TCPConnection()
     */
 
     loop_ = false;
-    connectionLoop_.join();
+    if (connectionLoop_.joinable())
+        connectionLoop_.join();
 
     // terminate connection
     tcpSocket_->abort();
@@ -54,6 +55,12 @@ TCPConnection::~TCPConnection()
 
 void TCPConnection::LoopConnection()
 {
+    assert(tcpSocket_ && "tcpSocket_ is nullptr!");
+
+    QDataStream in{ tcpSocket_.get() };
+    in.setVersion(QDataStream::Qt_4_0);
+    QString protocol{ "#M" };
+
     // TODO: implement
     while(loop_)
     { 
@@ -63,10 +70,31 @@ void TCPConnection::LoopConnection()
             continue;
         }
 
-        // receive message
-        // check message
-        // append msg to the container
+        QString msgBegin,
+            message;
+        int counter;
 
+        // receive message
+        do
+        {
+            in.startTransaction();
+            in >> msgBegin >> counter >> message;
+
+        } while (!in.commitTransaction());
+
+
+        // check if message starts properly and that the counter is not even
+        if (msgBegin != protocol ||
+            !(counter % 2))
+        {
+            container_.AppendMessage(ipStr_ + QString(": protocol violation. Corrupted message."));
+            continue;
+        }
+
+        if (message.isEmpty())
+            continue;
+
+        container_.AppendMessage(ipStr_ + QString(": ") + message);
     }
 }
 
