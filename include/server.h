@@ -6,6 +6,7 @@
 #include "qvariant.h"
 
 #include <vector>
+#include <list>
 #include <shared_mutex>
 #include <atomic>
 #include <thread>
@@ -51,25 +52,91 @@ private:
 
 };
 
+
 class Ui_ServerDialog;
+class QTcpServer;
+class QNetworkSession;
+class QTcpSocket;
+class QListWidget;
+
+class TCPConnection
+{
+    Container& container_;
+    std::unique_ptr<QTcpSocket> tcpSocket_;
+    QString ipStr_;
+
+    std::atomic_bool loop_ = true;
+    std::thread connectionLoop_;
+
+public:
+    TCPConnection(Container& container, QTcpSocket *tcpSocket);
+
+    /* this class is not movable due to inability to properly move the
+    connection thread: LoopConnection functor will hold a invalid pointer.*/
+    TCPConnection(const TCPConnection&) = delete;
+    TCPConnection(TCPConnection&& other) = delete;
+
+    const QString& GetIP() const;
+
+
+    ~TCPConnection();
+
+private:
+
+    void LoopConnection();
+
+};
+
+class Connections
+{
+    // this reference is used to append new ip names
+    QListWidget& listConnections_;
+
+    std::list<TCPConnection> connections_;
+
+public:
+    Connections(QListWidget& listConnections);
+
+    void AddConnection(Container& container, QTcpSocket *tcpSocket);
+
+    void TerminateConnection(size_t indx);
+
+    ~Connections();
+};
+
+
 
 class Server : public QDialog
 {
     Q_OBJECT
 
 private:
-    std::unique_ptr<Ui_ServerDialog> ui_;
     Container container_;
+
+    std::unique_ptr<Ui_ServerDialog> ui_;
     ServerMsgLoop servermsgLoop_{ container_ };
+
+    // tcp server owns all the existing sockets, so it should be deleted 
+    // after all the connections have been terminated
+    std::unique_ptr<QTcpServer> tcpServer_;
+    std::unique_ptr<QNetworkSession> networkSession_;
+
+    Connections connections_;
+
+
 
 public:
     explicit Server(QWidget *parent = nullptr);
     ~Server();
 
 private:
+
+    static std::unique_ptr<Ui_ServerDialog> SetupUi(Server *dialog);
+
     void SendMessage();
-
     void EnableBtnSend(const QString& text);
-
+    void ConnectionSelected();
+    void NewConnection();
+    void TerminateSelectedConnections();
 };
 

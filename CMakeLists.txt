@@ -20,6 +20,7 @@ find_package(Qt5 COMPONENTS REQUIRED
 	
 set(SERVER_SRC
 	src/server.cpp
+	src/Connections.cpp
 	)
 
 qt5_wrap_cpp(SERVER_SRC
