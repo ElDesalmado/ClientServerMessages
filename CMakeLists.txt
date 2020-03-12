@@ -52,7 +52,42 @@ target_include_directories(Server
 		
 		${CMAKE_CURRENT_BINARY_DIR}
 	)
+
+set(CLIENT_SRC
+	src/client.cpp
+	src/ClientConnection.cpp
+	)
+
+qt5_wrap_cpp(CLIENT_SRC
+	include/client.h
+	)
+
+qt5_wrap_ui(client_ui
+	${CMAKE_CURRENT_SOURCE_DIR}/ui/clientdialog.ui
+	)
+
+add_executable(Client
+	include/client.h
+	${CLIENT_SRC}
+	${client_ui}
+	src/ClientMain.cpp
+	)
 	
+target_link_libraries(Client
+	PRIVATE
+		Qt5::Core
+		Qt5::Gui
+		Qt5::Widgets
+		Qt5::Network
+	)
+	
+target_include_directories(Client
+	PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/include
+		
+		${CMAKE_CURRENT_BINARY_DIR}
+	)
+
 # TODO: add copying qwindows.dll
 if(WIN32)
 add_custom_target(COPY_QT_DLLS ALL
