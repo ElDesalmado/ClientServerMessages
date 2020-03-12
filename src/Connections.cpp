@@ -33,15 +33,18 @@ void TCPConnection::LoopConnection()
 {
     assert(tcpSocket_ && "tcpSocket_ is nullptr!");
 
-    QDataStream in{ tcpSocket_.get() };
+    QDataStream in { tcpSocket_.get() };
     in.setVersion(QDataStream::Qt_4_0);
     QString protocol{ "#M" };
 
+    QAbstractSocket::SocketState state = tcpSocket_->state();
+
     // TODO: implement
     while(loop_ &&
-        tcpSocket_->state() != QAbstractSocket::ConnectedState)
+        (state = tcpSocket_->state()) == QAbstractSocket::ConnectedState)
     { 
-        if (!tcpSocket_->waitForReadyRead(500))
+        // throws when client disonnects
+        if (!tcpSocket_->waitForReadyRead(2000))
         {
             container_.AppendMessage(ipStr_ + QString(": counter timeout..."));
             continue;
@@ -52,11 +55,14 @@ void TCPConnection::LoopConnection()
             message;
         int counter;
 
+        auto bytes = tcpSocket_->bytesAvailable();
         in.startTransaction();
         in >> msgBegin >> counter >> message;
 
         if (!in.commitTransaction())
             continue;
+
+        // for an unknown reason the execution does not go beyond this point
 
         // check if message starts properly and that the counter is not even
         if (msgBegin != protocol ||
@@ -67,10 +73,16 @@ void TCPConnection::LoopConnection()
         }
 
         if (message.isEmpty())
+        {
+            container_.AppendMessage(ipStr_ + QString(" counter: ") + QString::number(counter));
             continue;
+        }
 
         container_.AppendMessage(ipStr_ + QString(": ") + message);
     }
+
+    bool broken = loop_;
+
 }
 
 
