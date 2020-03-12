@@ -20,12 +20,14 @@ void Connection::SendMessage(const QString & msg)
     QByteArray block;
     QDataStream out{ &block, QIODevice::WriteOnly };
     out.setVersion(QDataStream::Qt_4_0);
-    out << "#M" << counter_ << msg;
+    out << QString("#M") << (int)counter_ << msg;
 
     std::lock_guard<std::mutex> lg{ socketMutex_ };
     tcpSocket_->write(block);
     tcpSocket_->waitForBytesWritten(500);
     
+    // here exception is thrown if try to connect after disconnecting
+
     counter_ += 2;
 }
 
@@ -33,7 +35,11 @@ bool Connection::Connect(const QString & ipAddress, quint16 port)
 {
     tcpSocket_->connectToHost(ipAddress, port);
     if (tcpSocket_->waitForConnected(3000))
+    {
+        loop_ = true;
+        msgLoop_ = std::thread(std::bind(&Connection::RunLoop, this));
         return true;
+    }
 
     return false;
 }
@@ -47,11 +53,27 @@ void Connection::Disconnect()
 {
     assert(IsConnected() && "Not connected!");
 
+    loop_ = false;
+    if (msgLoop_.joinable())
+        msgLoop_.join();
+    tcpSocket_->flush();
+
     tcpSocket_->disconnectFromHost();
     tcpSocket_->waitForDisconnected();
 }
 
 Connection::~Connection()
 {
+    if (IsConnected())
+        Disconnect();
+}
+
+void Connection::RunLoop()
+{
+    while (loop_)
+    {
+        SendMessage();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+    }
 }
 

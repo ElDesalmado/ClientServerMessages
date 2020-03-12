@@ -22,7 +22,10 @@ private:
     std::unique_ptr<QTcpSocket> tcpSocket_;
     QDataStream out_;
     std::atomic<int> counter_ = 1;
+    std::atomic_bool loop_ = true;
     mutable std::mutex socketMutex_;
+
+    std::thread msgLoop_;
 
 public:
 
@@ -41,6 +44,8 @@ public:
    // void Connected();
    // void Disconnected();
 
+private:
+    void RunLoop();
 };
 
 class Client : public QDialog
