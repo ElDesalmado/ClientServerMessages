@@ -44,6 +44,7 @@ Server::Server(QWidget *parent)
 {
     // setup ui
     ui_->setupUi(this);
+    ui_->lineEditMsg->setPlaceholderText(QString("Enter your message..."));
 
     connect(ui_->btnSendMsg, &QAbstractButton::clicked, this, &Server::SendMessage);
     connect(ui_->lineEditMsg, &QLineEdit::returnPressed, this, &Server::SendMessage);

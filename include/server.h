@@ -43,9 +43,11 @@ public:
     void Start();
     void Stop();
 
-    void RunLoop();
    
     ~ServerMsgLoop();
+
+private:
+    void RunLoop();
 
 };
 

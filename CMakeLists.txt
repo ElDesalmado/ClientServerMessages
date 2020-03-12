@@ -54,11 +54,12 @@ target_include_directories(Server
 	
 # TODO: add copying qwindows.dll
 if(WIN32)
-add_custom_target(COPY_QT_DLLS
+add_custom_target(COPY_QT_DLLS ALL
+	COMMENT "Deploying Qt Dlls..."
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:Server>
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:Server>
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:Server>
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Network> $<TARGET_FILE_DIR:Server>
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::QWindowsIntegrationPlugin> $<TARGET_FILE_DIR:Server>
 	)
 endif()
-	
