@@ -2,7 +2,7 @@ Current stage: In developement.
 
 Version: 0.1.1
 
-### Intsalation:
+### Intsallation:
 On Windows, using Powershell
 
 ```
