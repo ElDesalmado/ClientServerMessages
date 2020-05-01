@@ -24,7 +24,7 @@ void Connection::SendMessage(const QString & msg)
 
     std::lock_guard<std::mutex> lg{ socketMutex_ };
     tcpSocket_->write(block);
-    tcpSocket_->waitForBytesWritten(500);
+    tcpSocket_->waitForBytesWritten(3000);
     
     // here exception is thrown if try to connect after disconnecting
 

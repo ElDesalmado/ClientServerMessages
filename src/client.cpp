@@ -1,4 +1,6 @@
-﻿#include "client.h"
+﻿#include <cassert>
+
+#include "client.h"
 
 #include "ui_clientdialog.h"
 

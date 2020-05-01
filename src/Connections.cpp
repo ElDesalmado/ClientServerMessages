@@ -6,12 +6,16 @@
 
 #include "qlistwidget.h"
 
+#include <functional>
+#include <cassert>
+
 TCPConnection::TCPConnection(Container& container, QTcpSocket * tcpSocket)
     : container_(container),
     tcpSocket_(tcpSocket),
     ipStr_(tcpSocket_->peerAddress().toString()),
     connectionLoop_(std::bind(&TCPConnection::LoopConnection, this))
 {
+    connect(tcpSocket, &QTcpSocket::disconnected, this, &TCPConnection::onDisconnected);
 }
 
 const QString & TCPConnection::GetIP() const
@@ -19,14 +23,23 @@ const QString & TCPConnection::GetIP() const
     return ipStr_;
 }
 
-TCPConnection::~TCPConnection()
+void TCPConnection::Stop()
 {
+    assert(loop_ && "Loop is not running!");
     loop_ = false;
+
     if (connectionLoop_.joinable())
         connectionLoop_.join();
+}
 
+TCPConnection::~TCPConnection()
+{
     // terminate connection
-    tcpSocket_->abort();
+    if (IsRunning())
+    {
+        Stop();
+        tcpSocket_->abort();
+    }
 }
 
 void TCPConnection::LoopConnection()
@@ -37,13 +50,10 @@ void TCPConnection::LoopConnection()
     in.setVersion(QDataStream::Qt_4_0);
     QString protocol{ "#M" };
 
-    QAbstractSocket::SocketState state = tcpSocket_->state();
-
     // TODO: implement
-    while(loop_ &&
-        (state = tcpSocket_->state()) == QAbstractSocket::ConnectedState)
+    while(loop_)
     { 
-        // throws when client disonnects
+        // throws when client disconnects
         if (!tcpSocket_->waitForReadyRead(2000))
         {
             container_.AppendMessage(ipStr_ + QString(": counter timeout..."));
@@ -55,7 +65,6 @@ void TCPConnection::LoopConnection()
             message;
         int counter;
 
-        auto bytes = tcpSocket_->bytesAvailable();
         in.startTransaction();
         in >> msgBegin >> counter >> message;
 
@@ -81,8 +90,16 @@ void TCPConnection::LoopConnection()
         container_.AppendMessage(ipStr_ + QString(": ") + message);
     }
 
-    bool broken = loop_;
+}
 
+bool TCPConnection::IsRunning() const
+{
+    return loop_;
+}
+
+void TCPConnection::onDisconnected()
+{
+    emit Disconnected(this);
 }
 
 
@@ -90,21 +107,41 @@ Connections::Connections(QListWidget & listConnections)
     : listConnections_(listConnections)
 {}
 
-void Connections::AddConnection(Container& container, QTcpSocket *tcpSocket)
+
+TCPConnection * Connections::AddConnection(Container& container, QTcpSocket *tcpSocket)
 {
-    connections_.emplace_back(container, tcpSocket);
-    listConnections_.addItem(connections_.back().GetIP());
+    return &connections_.emplace_back(container, tcpSocket);
+
+    // listConnections_.addItem(connections_.back().GetIP());
 }
 
 void Connections::TerminateConnection(size_t indx)
 {
-    assert(indx != -1 && "Invalid index!");
+    assert(indx < connections_.size() && "Invalid index!");
 
-    decltype(connections_)::const_iterator iter = 
-        std::next(connections_.cbegin(), indx);
+    decltype(connections_)::iterator iter =
+        std::next(connections_.begin(), indx);
+
+    iter->Stop();
     connections_.erase(iter);
+
 }
 
 Connections::~Connections()
 {
 }
+
+std::optional<size_t> Connections::ConnectionIndx(TCPConnection *pConnection) const
+{
+    auto found = std::find_if(connections_.cbegin(), connections_.cend(),
+            [&](const TCPConnection& connection)
+            {
+                return &connection == pConnection;
+            });
+    if (found == connections_.cend())
+        return std::nullopt;
+
+    return std::distance(connections_.cbegin(), found);
+}
+
+

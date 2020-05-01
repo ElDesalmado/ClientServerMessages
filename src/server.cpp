@@ -132,8 +132,11 @@ void Server::ConnectionSelected()
 
 void Server::NewConnection()
 {
-    connections_.AddConnection(container_, 
+    TCPConnection *connection = connections_.AddConnection(container_,
         tcpServer_->nextPendingConnection());
+    ui_->listConnections->addItem(connection->GetIP());
+
+    connect(connection, &TCPConnection::Disconnected, this, &Server::onDisconnected);
 }
 
 void Server::TerminateSelectedConnections()
@@ -152,6 +155,15 @@ void Server::TerminateSelectedConnections()
     }
 }
 
+void Server::onDisconnected(TCPConnection *pConnection)
+{
+    std::optional<size_t> connectionIndx = connections_.ConnectionIndx(pConnection);
+    assert(connectionIndx);
+
+    connections_.TerminateConnection(*connectionIndx);
+    delete ui_->listConnections->takeItem((int)*connectionIndx);
+}
+
 void ServerMsgLoop::SendCounter()
 {
     container_.AppendMessage(QString("Server counter: ") + QString::number(counter_));
@@ -160,7 +172,7 @@ void ServerMsgLoop::SendCounter()
 
 void ServerMsgLoop::Start()
 {
-    assert(end_ && "Loop is already running!");
+    assert(!end_ && "Loop is already running!");
     end_ = false;
 
     std::function<void()> runLoop = std::bind(&ServerMsgLoop::RunLoop, this);

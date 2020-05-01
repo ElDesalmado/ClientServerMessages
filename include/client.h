@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <atomic>
+#include <thread>
 #include <mutex>
 
 class Ui_ClientDialog;

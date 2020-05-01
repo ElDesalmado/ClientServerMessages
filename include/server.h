@@ -10,6 +10,7 @@
 #include <shared_mutex>
 #include <atomic>
 #include <thread>
+#include <optional>
 
 class Container : public QAbstractListModel
 {
@@ -26,7 +27,7 @@ public:
 
 class ServerMsgLoop
 {
-    std::atomic_bool end_;
+    std::atomic_bool end_{false};
     Container& container_;
 
     std::thread msgLoop_;
@@ -35,7 +36,7 @@ class ServerMsgLoop
 
 public:
 
-    ServerMsgLoop(Container& container)
+    explicit ServerMsgLoop(Container& container)
         : container_(container)
     {}
 
@@ -59,8 +60,10 @@ class QNetworkSession;
 class QTcpSocket;
 class QListWidget;
 
-class TCPConnection
+class TCPConnection : public QObject
 {
+    Q_OBJECT
+
     Container& container_;
     std::unique_ptr<QTcpSocket> tcpSocket_;
     QString ipStr_;
@@ -74,16 +77,23 @@ public:
     /* this class is not movable due to inability to properly move the
     connection thread: LoopConnection functor will hold a invalid pointer.*/
     TCPConnection(const TCPConnection&) = delete;
-    TCPConnection(TCPConnection&& other) = delete;
+    //TCPConnection(TCPConnection&& other) = delete;
 
     const QString& GetIP() const;
+    bool IsRunning() const;
 
+    void Stop();
 
     ~TCPConnection();
+
+    signals:
+
+    void Disconnected(TCPConnection *connection);
 
 private:
 
     void LoopConnection();
+    void onDisconnected();
 
 };
 
@@ -97,10 +107,11 @@ class Connections
     std::list<TCPConnection> connections_;
 
 public:
-    Connections(QListWidget& listConnections);
+    explicit Connections(QListWidget& listConnections);
 
-    void AddConnection(Container& container, QTcpSocket *tcpSocket);
 
+    TCPConnection * AddConnection(Container& container, QTcpSocket *tcpSocket);
+    std::optional<size_t> ConnectionIndx(TCPConnection *pConnection) const;
     void TerminateConnection(size_t indx);
 
     ~Connections();
@@ -129,7 +140,7 @@ private:
 
 public:
     explicit Server(QWidget *parent = nullptr);
-    ~Server();
+    ~Server() override;
 
 private:
 
@@ -140,5 +151,7 @@ private:
     void ConnectionSelected();
     void NewConnection();
     void TerminateSelectedConnections();
+
+    void onDisconnected(TCPConnection *pConnection);
 };
 
